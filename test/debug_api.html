@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API调试工具</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        h1 { color: #333; }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover { background: #45a049; }
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .error { color: #f48771; }
+        .success { color: #89d185; }
+        .warning { color: #e5c07b; }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API调试工具</h1>
+
+        <div class="section">
+            <h2>测试 mark_point.php</h2>
+            <button onclick="testMarkPoint()">测试标记功能</button>
+            <button onclick="testMarkPointRaw()">查看原始响应</button>
+            <div class="output" id="mark-output">点击按钮开始测试...</div>
+        </div>
+
+        <div class="section">
+            <h2>获取测试数据</h2>
+            <button onclick="getFirstPoint()">获取第1天第1个知识点</button>
+            <div class="output" id="point-output">点击按钮获取数据...</div>
+        </div>
+
+        <div class="section">
+            <h2>检查所有API</h2>
+            <button onclick="checkAllAPIs()">检查所有API健康状态</button>
+            <div class="output" id="health-output">点击按钮检查...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'api/';
+
+        function log(elementId, message, type = 'info') {
+            const output = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            let color = '#d4d4d4';
+            if (type === 'error') color = '#f48771';
+            if (type === 'success') color = '#89d185';
+            if (type === 'warning') color = '#e5c07b';
+
+            output.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function getFirstPoint() {
+            const output = document.getElementById('point-output');
+            output.innerHTML = '';
+
+            try {
+                log('point-output', '正在获取第1天的知识点...', 'info');
+
+                const response = await fetch(API_BASE + 'get_points.php?day=1');
+
+                log('point-output', `HTTP状态码: ${response.status} ${response.statusText}`, 'info');
+                log('point-output', `Content-Type: ${response.headers.get('content-type')}`, 'info');
+
+                const text = await response.text();
+                log('point-output', `响应长度: ${text.length} 字节`, 'info');
+                log('point-output', '\n原始响应内容:', 'warning');
+                log('point-output', text.substring(0, 500), 'info');
+
+                // 尝试解析JSON
+                try {
+                    const data = JSON.parse(text);
+                    log('point-output', '\n✓ JSON解析成功', 'success');
+
+                    if (data.success && data.data.points && data.data.points.length > 0) {
+                        const firstPoint = data.data.points[0];
+                        log('point-output', '\n第1个知识点信息:', 'success');
+                        log('point-output', JSON.stringify(firstPoint, null, 2), 'info');
+
+                        // 保存到window供其他函数使用
+                        window.testPointId = firstPoint.id;
+                        window.testPointStatus = firstPoint.status;
+                    }
+                } catch (e) {
+                    log('point-output', '\n✗ JSON解析失败: ' + e.message, 'error');
+
+                    // 显示前100个字符的十六进制
+                    const hex = Array.from(text.substring(0, 100))
+                        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+                        .join(' ');
+                    log('point-output', '\n前100字节的十六进制:', 'warning');
+                    log('point-output', hex, 'info');
+                }
+
+            } catch (error) {
+                log('point-output', '✗ 请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function testMarkPointRaw() {
+            const output = document.getElementById('mark-output');
+            output.innerHTML = '';
+
+            try {
+                log('mark-output', '正在测试 mark_point.php 原始响应...', 'info');
+
+                const testData = {
+                    pointId: window.testPointId || 1,
+                    action: 'remember',
+                    day: 1
+                };
+
+                log('mark-output', '请求数据: ' + JSON.stringify(testData, null, 2), 'info');
+
+                const response = await fetch(API_BASE + 'mark_point.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                log('mark-output', `\nHTTP状态码: ${response.status} ${response.statusText}`, 'info');
+                log('mark-output', `Content-Type: ${response.headers.get('content-type')}`, 'info');
+
+                const text = await response.text();
+                log('mark-output', `响应长度: ${text.length} 字节`, 'info');
+
+                log('mark-output', '\n原始响应内容 (前500字符):', 'warning');
+                log('mark-output', text.substring(0, 500), 'info');
+
+                // 检查是否有BOM或其他隐藏字符
+                if (text.charCodeAt(0) === 0xFEFF) {
+                    log('mark-output', '\n⚠️ 检测到UTF-8 BOM字符!', 'error');
+                }
+
+                // 显示前50个字符的详细信息
+                log('mark-output', '\n前50个字符的详细分析:', 'warning');
+                for (let i = 0; i < Math.min(50, text.length); i++) {
+                    const char = text[i];
+                    const code = text.charCodeAt(i);
+                    const hex = code.toString(16).padStart(4, '0');
+                    log('mark-output', `[${i}] '${char}' (0x${hex} = ${code})`, 'info');
+                }
+
+                // 尝试找到JSON的实际开始位置
+                const jsonStart = text.indexOf('{');
+                if (jsonStart > 0) {
+                    log('mark-output', `\n⚠️ JSON不是从第0个字符开始,而是从第${jsonStart}个字符开始`, 'error');
+                    log('mark-output', `JSON之前的内容: "${text.substring(0, jsonStart)}"`, 'error');
+
+                    // 尝试解析去掉前缀的JSON
+                    try {
+                        const cleanJson = text.substring(jsonStart);
+                        const data = JSON.parse(cleanJson);
+                        log('mark-output', '\n✓ 清理后的JSON解析成功:', 'success');
+                        log('mark-output', JSON.stringify(data, null, 2), 'success');
+                    } catch (e) {
+                        log('mark-output', '\n✗ 清理后仍然解析失败: ' + e.message, 'error');
+                    }
+                } else if (jsonStart === 0) {
+                    // JSON从开头开始,尝试解析
+                    try {
+                        const data = JSON.parse(text);
+                        log('mark-output', '\n✓ JSON解析成功:', 'success');
+                        log('mark-output', JSON.stringify(data, null, 2), 'success');
+                    } catch (e) {
+                        log('mark-output', '\n✗ JSON解析失败: ' + e.message, 'error');
+
+                        // 查找问题位置
+                        const match = e.message.match(/position (\d+)/);
+                        if (match) {
+                            const pos = parseInt(match[1]);
+                            log('mark-output', `\n错误位置前后的内容:`, 'warning');
+                            log('mark-output', `"${text.substring(Math.max(0, pos-20), pos+20)}"`, 'info');
+                        }
+                    }
+                } else {
+                    log('mark-output', '\n✗ 响应中没有找到JSON内容', 'error');
+                }
+
+            } catch (error) {
+                log('mark-output', '✗ 请求失败: ' + error.message, 'error');
+                log('mark-output', error.stack, 'error');
+            }
+        }
+
+        async function testMarkPoint() {
+            const output = document.getElementById('mark-output');
+            output.innerHTML = '';
+
+            try {
+                log('mark-output', '正在测试标记功能...', 'info');
+
+                const response = await fetch(API_BASE + 'mark_point.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pointId: window.testPointId || 1,
+                        action: 'remember',
+                        day: 1
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    log('mark-output', '✓ 测试成功!', 'success');
+                    log('mark-output', JSON.stringify(result, null, 2), 'success');
+                } else {
+                    log('mark-output', '✗ 测试失败: ' + result.error, 'error');
+                }
+
+            } catch (error) {
+                log('mark-output', '✗ 错误: ' + error.message, 'error');
+                log('mark-output', error.stack, 'error');
+            }
+        }
+
+        async function checkAllAPIs() {
+            const output = document.getElementById('health-output');
+            output.innerHTML = '';
+
+            const apis = [
+                { name: 'get_current_day.php', method: 'GET' },
+                { name: 'get_points.php?day=1', method: 'GET' },
+                { name: 'get_stats.php', method: 'GET' },
+                { name: 'mark_point.php (GET-应该失败)', method: 'GET' }
+            ];
+
+            for (const api of apis) {
+                try {
+                    log('health-output', `\n检查: ${api.name}`, 'warning');
+
+                    const response = await fetch(API_BASE + api.name);
+                    const text = await response.text();
+
+                    log('health-output', `状态: ${response.status}`, 'info');
+                    log('health-output', `长度: ${text.length} 字节`, 'info');
+
+                    // 检查是否有非JSON内容
+                    const jsonStart = text.indexOf('{');
+                    if (jsonStart > 0) {
+                        log('health-output', `⚠️ 有${jsonStart}字节的非JSON前缀`, 'error');
+                        log('health-output', `前缀内容: "${text.substring(0, jsonStart)}"`, 'error');
+                    }
+
+                    try {
+                        const data = JSON.parse(jsonStart > 0 ? text.substring(jsonStart) : text);
+                        log('health-output', `✓ JSON有效: success=${data.success}`, 'success');
+                    } catch (e) {
+                        log('health-output', `✗ JSON无效: ${e.message}`, 'error');
+                    }
+
+                } catch (error) {
+                    log('health-output', `✗ 请求失败: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // 页面加载时自动检查
+        window.addEventListener('load', () => {
+            console.log('API调试工具已加载');
+        });
+    </script>
+</body>
+</html>

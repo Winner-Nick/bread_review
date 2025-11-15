@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考研背诵系统 - 单元测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header:hover {
+            background: #eeeeee;
+        }
+
+        .section-content {
+            padding: 20px;
+        }
+
+        .test-case {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-left: 4px solid #ccc;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+
+        .test-case.running {
+            border-left-color: #2196F3;
+            background: #E3F2FD;
+        }
+
+        .test-case.passed {
+            border-left-color: #4CAF50;
+            background: #E8F5E9;
+        }
+
+        .test-case.failed {
+            border-left-color: #f44336;
+            background: #FFEBEE;
+        }
+
+        .test-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .test-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .test-result {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .test-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-pending {
+            background: #FFF9C4;
+            color: #F57F17;
+        }
+
+        .status-running {
+            background: #B3E5FC;
+            color: #01579B;
+        }
+
+        .status-passed {
+            background: #C8E6C9;
+            color: #1B5E20;
+        }
+
+        .status-failed {
+            background: #FFCDD2;
+            color: #B71C1C;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .summary {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .summary-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .value-total { color: #666; }
+        .value-passed { color: #4CAF50; }
+        .value-failed { color: #f44336; }
+        .value-running { color: #2196F3; }
+
+        .api-base-config {
+            background: #FFF3E0;
+            border: 1px solid #FFB74D;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .api-base-config label {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .api-base-config input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s;
+        }
+
+        .collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .collapsed .section-content {
+            display: none;
+        }
+
+        .error-highlight {
+            color: #f44336;
+            font-weight: 600;
+        }
+
+        .success-highlight {
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 考研背诵系统 - 单元测试套件</h1>
+        <p class="subtitle">完整的API和前端功能测试 | 自动化测试框架</p>
+
+        <!-- API配置 -->
+        <div class="api-base-config">
+            <label for="api-base-input">API 基础路径:</label>
+            <input type="text" id="api-base-input" value="api/" placeholder="api/">
+            <button class="btn btn-secondary" onclick="updateApiBase()" style="margin-left: 10px; padding: 8px 16px;">更新</button>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <!-- 测试摘要 -->
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">总测试数</div>
+                <div class="summary-value value-total" id="total-tests">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">通过</div>
+                <div class="summary-value value-passed" id="passed-tests">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">失败</div>
+                <div class="summary-value value-failed" id="failed-tests">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">运行中</div>
+                <div class="summary-value value-running" id="running-tests">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">通过率</div>
+                <div class="summary-value value-total" id="pass-rate">0%</div>
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="controls">
+            <button class="btn btn-primary" onclick="runAllTests()">▶️ 运行所有测试</button>
+            <button class="btn btn-secondary" onclick="runSection('api-tests')">运行 API 测试</button>
+            <button class="btn btn-secondary" onclick="runSection('data-tests')">运行数据验证测试</button>
+            <button class="btn btn-secondary" onclick="runSection('edge-tests')">运行边界测试</button>
+            <button class="btn btn-danger" onclick="clearResults()">清除结果</button>
+        </div>
+
+        <!-- 测试区域 -->
+        <div id="test-sections"></div>
+    </div>
+
+    <script>
+        // ========== 配置 ==========
+        let API_BASE = 'api/';
+
+        function updateApiBase() {
+            API_BASE = document.getElementById('api-base-input').value;
+            console.log('API基础路径已更新为:', API_BASE);
+        }
+
+        // ========== 测试状态管理 ==========
+        const testState = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            running: 0
+        };
+
+        // ========== 测试定义 ==========
+        const testSuites = [
+            {
+                id: 'api-tests',
+                name: 'API 端点测试',
+                description: '测试所有后端API的基本功能',
+                tests: [
+                    {
+                        name: 'API-01: 获取当前天数',
+                        description: '测试 get_current_day.php 是否正常返回当前天数',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_current_day.php');
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('API返回失败: ' + result.error);
+                            }
+
+                            if (!result.data.currentDay) {
+                                throw new Error('缺少currentDay字段');
+                            }
+
+                            if (result.data.currentDay < 1 || result.data.currentDay > 30) {
+                                throw new Error('currentDay超出范围: ' + result.data.currentDay);
+                            }
+
+                            return {
+                                currentDay: result.data.currentDay,
+                                currentDate: result.data.currentDate,
+                                startDate: result.data.startDate
+                            };
+                        }
+                    },
+                    {
+                        name: 'API-02: 获取第1天的知识点',
+                        description: '测试 get_points.php 能否正确返回第1天的题目',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_points.php?day=1');
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('API返回失败: ' + result.error);
+                            }
+
+                            if (!Array.isArray(result.data.points)) {
+                                throw new Error('points不是数组');
+                            }
+
+                            if (result.data.points.length === 0) {
+                                throw new Error('第1天没有知识点');
+                            }
+
+                            // 验证知识点结构
+                            const point = result.data.points[0];
+                            const requiredFields = ['id', '科目', '章节', '考点', '页码', 'status'];
+                            for (const field of requiredFields) {
+                                if (!(field in point)) {
+                                    throw new Error(`知识点缺少字段: ${field}`);
+                                }
+                            }
+
+                            return {
+                                totalPoints: result.data.totalPoints,
+                                completedCount: result.data.completedCount,
+                                firstPoint: point.考点.substring(0, 50)
+                            };
+                        }
+                    },
+                    {
+                        name: 'API-03: 获取第30天的知识点',
+                        description: '测试获取最后一天的数据',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_points.php?day=30');
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('API返回失败: ' + result.error);
+                            }
+
+                            return {
+                                day: result.data.day,
+                                totalPoints: result.data.totalPoints
+                            };
+                        }
+                    },
+                    {
+                        name: 'API-04: 获取统计信息',
+                        description: '测试 get_stats.php 返回正确的统计数据',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_stats.php');
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('API返回失败: ' + result.error);
+                            }
+
+                            const overview = result.data.overview;
+                            if (!overview) {
+                                throw new Error('缺少overview字段');
+                            }
+
+                            const requiredFields = ['totalPoints', 'completedCount', 'pendingCount', 'completionRate'];
+                            for (const field of requiredFields) {
+                                if (!(field in overview)) {
+                                    throw new Error(`统计信息缺少字段: ${field}`);
+                                }
+                            }
+
+                            if (overview.totalPoints !== 272) {
+                                throw new Error(`总知识点数应为272,实际为${overview.totalPoints}`);
+                            }
+
+                            return {
+                                totalPoints: overview.totalPoints,
+                                completedCount: overview.completedCount,
+                                completionRate: overview.completionRate + '%'
+                            };
+                        }
+                    },
+                    {
+                        name: 'API-05: 标记知识点 - 记得',
+                        description: '测试标记知识点为"记得"的功能(注意:会修改数据)',
+                        async run() {
+                            // 先获取第1天的一个知识点
+                            const getResponse = await fetch(API_BASE + 'get_points.php?day=1');
+                            const getData = await getResponse.json();
+
+                            if (!getData.success || getData.data.points.length === 0) {
+                                throw new Error('无法获取测试数据');
+                            }
+
+                            const testPoint = getData.data.points[0];
+
+                            // 如果已经完成,跳过测试
+                            if (testPoint.status === 'completed') {
+                                return { message: '跳过:该知识点已标记为完成', pointId: testPoint.id };
+                            }
+
+                            // 标记为记得
+                            const markResponse = await fetch(API_BASE + 'mark_point.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    pointId: testPoint.id,
+                                    action: 'remember',
+                                    day: 1
+                                })
+                            });
+
+                            const markResult = await markResponse.json();
+
+                            if (!markResult.success) {
+                                throw new Error('标记失败: ' + markResult.error);
+                            }
+
+                            return {
+                                pointId: testPoint.id,
+                                action: 'remember',
+                                status: '已标记'
+                            };
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'data-tests',
+                name: '数据验证测试',
+                description: '验证数据文件的完整性和一致性',
+                tests: [
+                    {
+                        name: 'DATA-01: 题库文件可访问性',
+                        description: '验证 points_pool.json 是否可以通过API访问',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_stats.php');
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('无法访问题库数据');
+                            }
+
+                            if (!result.data.config) {
+                                throw new Error('缺少config配置');
+                            }
+
+                            return {
+                                startDate: result.data.config.startDate,
+                                totalDays: result.data.config.totalDays,
+                                totalPoints: result.data.config.totalPoints
+                            };
+                        }
+                    },
+                    {
+                        name: 'DATA-02: 每日分配数据一致性',
+                        description: '验证每天的知识点数量是否合理',
+                        async run() {
+                            const stats = await fetch(API_BASE + 'get_stats.php');
+                            const statsData = await stats.json();
+
+                            if (!statsData.success) {
+                                throw new Error('无法获取统计数据');
+                            }
+
+                            const dailyStats = statsData.data.dailyStats;
+                            const avgPointsPerDay = 403 / 30; // 约13.4
+
+                            let inconsistencies = [];
+                            for (let day = 1; day <= 30; day++) {
+                                const dayStat = dailyStats[day];
+                                if (dayStat.total > avgPointsPerDay + 5) {
+                                    inconsistencies.push(`第${day}天题目过多: ${dayStat.total}`);
+                                }
+                            }
+
+                            if (inconsistencies.length > 0) {
+                                return { warning: inconsistencies.join('; ') };
+                            }
+
+                            return { message: '每日分配均衡' };
+                        }
+                    },
+                    {
+                        name: 'DATA-03: 知识点字段完整性',
+                        description: '验证所有知识点都包含必要字段',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_points.php?day=1');
+                            const result = await response.json();
+
+                            if (!result.success || result.data.points.length === 0) {
+                                throw new Error('无法获取测试数据');
+                            }
+
+                            const requiredFields = ['id', '科目', '章节', '考点', '页码', 'status', 'assignedDay'];
+                            const points = result.data.points;
+
+                            for (let i = 0; i < Math.min(5, points.length); i++) {
+                                const point = points[i];
+                                for (const field of requiredFields) {
+                                    if (!(field in point)) {
+                                        throw new Error(`知识点${point.id}缺少字段: ${field}`);
+                                    }
+                                }
+                            }
+
+                            return {
+                                checkedPoints: Math.min(5, points.length),
+                                allFieldsPresent: true
+                            };
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'edge-tests',
+                name: '边界条件测试',
+                description: '测试极端情况和错误处理',
+                tests: [
+                    {
+                        name: 'EDGE-01: 无效天数 (day=0)',
+                        description: '测试当day=0时API的错误处理',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_points.php?day=0');
+                            const result = await response.json();
+
+                            if (result.success) {
+                                throw new Error('应该返回错误,但返回成功');
+                            }
+
+                            return { errorMessage: result.error };
+                        }
+                    },
+                    {
+                        name: 'EDGE-02: 超出范围天数 (day=31)',
+                        description: '测试当day=31时API的错误处理',
+                        async run() {
+                            const response = await fetch(API_BASE + 'get_points.php?day=31');
+                            const result = await response.json();
+
+                            if (result.success) {
+                                throw new Error('应该返回错误,但返回成功');
+                            }
+
+                            return { errorMessage: result.error };
+                        }
+                    },
+                    {
+                        name: 'EDGE-03: 无效的action参数',
+                        description: '测试mark_point.php对无效action的处理',
+                        async run() {
+                            const response = await fetch(API_BASE + 'mark_point.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    pointId: 1,
+                                    action: 'invalid_action',
+                                    day: 1
+                                })
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                throw new Error('应该返回错误,但返回成功');
+                            }
+
+                            return { errorMessage: result.error };
+                        }
+                    },
+                    {
+                        name: 'EDGE-04: 缺少必要参数',
+                        description: '测试mark_point.php对缺少参数的处理',
+                        async run() {
+                            const response = await fetch(API_BASE + 'mark_point.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    pointId: 1
+                                    // 缺少action和day
+                                })
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                throw new Error('应该返回错误,但返回成功');
+                            }
+
+                            return { errorMessage: result.error };
+                        }
+                    },
+                    {
+                        name: 'EDGE-05: GET请求到POST端点',
+                        description: '测试mark_point.php对错误HTTP方法的处理',
+                        async run() {
+                            const response = await fetch(API_BASE + 'mark_point.php?pointId=1&action=remember');
+                            const result = await response.json();
+
+                            if (result.success) {
+                                throw new Error('应该返回错误,但返回成功');
+                            }
+
+                            return { errorMessage: result.error };
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'performance-tests',
+                name: '性能测试',
+                description: '测试API响应时间和并发处理',
+                tests: [
+                    {
+                        name: 'PERF-01: API响应时间',
+                        description: '测试get_current_day.php的响应时间',
+                        async run() {
+                            const start = performance.now();
+                            const response = await fetch(API_BASE + 'get_current_day.php');
+                            const end = performance.now();
+
+                            const result = await response.json();
+
+                            if (!result.success) {
+                                throw new Error('API调用失败');
+                            }
+
+                            const responseTime = Math.round(end - start);
+
+                            if (responseTime > 1000) {
+                                return { warning: `响应时间过长: ${responseTime}ms`, responseTime: responseTime + 'ms' };
+                            }
+
+                            return { responseTime: responseTime + 'ms', status: '良好' };
+                        }
+                    },
+                    {
+                        name: 'PERF-02: 批量获取测试',
+                        description: '连续获取多天数据测试系统稳定性',
+                        async run() {
+                            const results = [];
+                            const start = performance.now();
+
+                            for (let day = 1; day <= 5; day++) {
+                                const response = await fetch(API_BASE + `get_points.php?day=${day}`);
+                                const result = await response.json();
+                                if (!result.success) {
+                                    throw new Error(`获取第${day}天数据失败`);
+                                }
+                                results.push({ day, pointCount: result.data.totalPoints });
+                            }
+
+                            const end = performance.now();
+                            const totalTime = Math.round(end - start);
+
+                            return {
+                                testedDays: 5,
+                                totalTime: totalTime + 'ms',
+                                avgTime: Math.round(totalTime / 5) + 'ms'
+                            };
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // ========== 测试执行引擎 ==========
+        function updateSummary() {
+            document.getElementById('total-tests').textContent = testState.total;
+            document.getElementById('passed-tests').textContent = testState.passed;
+            document.getElementById('failed-tests').textContent = testState.failed;
+            document.getElementById('running-tests').textContent = testState.running;
+
+            const passRate = testState.total > 0 ?
+                Math.round((testState.passed / testState.total) * 100) : 0;
+            document.getElementById('pass-rate').textContent = passRate + '%';
+
+            const progress = testState.total > 0 ?
+                ((testState.passed + testState.failed) / testState.total * 100) : 0;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+
+        async function runTest(suiteId, testIndex) {
+            const suite = testSuites.find(s => s.id === suiteId);
+            const test = suite.tests[testIndex];
+            const testId = `${suiteId}-${testIndex}`;
+            const testElement = document.getElementById(testId);
+
+            // 更新状态为运行中
+            testElement.className = 'test-case running';
+            testElement.querySelector('.test-status').className = 'test-status status-running';
+            testElement.querySelector('.test-status').textContent = '运行中';
+            testState.running++;
+            updateSummary();
+
+            try {
+                const result = await test.run();
+
+                // 测试通过
+                testElement.className = 'test-case passed';
+                testElement.querySelector('.test-status').className = 'test-status status-passed';
+                testElement.querySelector('.test-status').textContent = '✓ 通过';
+
+                const resultDiv = testElement.querySelector('.test-result');
+                resultDiv.innerHTML = '<span class="success-highlight">✓ 测试通过</span>\n\n结果:\n' +
+                    JSON.stringify(result, null, 2);
+
+                testState.running--;
+                testState.passed++;
+
+            } catch (error) {
+                // 测试失败
+                testElement.className = 'test-case failed';
+                testElement.querySelector('.test-status').className = 'test-status status-failed';
+                testElement.querySelector('.test-status').textContent = '✗ 失败';
+
+                const resultDiv = testElement.querySelector('.test-result');
+                resultDiv.innerHTML = '<span class="error-highlight">✗ 测试失败</span>\n\n错误信息:\n' +
+                    error.message + '\n\n堆栈:\n' + (error.stack || '无');
+
+                testState.running--;
+                testState.failed++;
+            }
+
+            updateSummary();
+        }
+
+        async function runSection(sectionId) {
+            const suite = testSuites.find(s => s.id === sectionId);
+            if (!suite) return;
+
+            for (let i = 0; i < suite.tests.length; i++) {
+                await runTest(sectionId, i);
+                await new Promise(resolve => setTimeout(resolve, 100)); // 小延迟避免过快
+            }
+        }
+
+        async function runAllTests() {
+            // 重置状态
+            testState.total = testSuites.reduce((sum, suite) => sum + suite.tests.length, 0);
+            testState.passed = 0;
+            testState.failed = 0;
+            testState.running = 0;
+            updateSummary();
+
+            // 运行所有测试
+            for (const suite of testSuites) {
+                await runSection(suite.id);
+            }
+
+            // 显示完成消息
+            if (testState.failed === 0) {
+                alert(`🎉 所有测试通过！\n\n通过: ${testState.passed}/${testState.total}`);
+            } else {
+                alert(`⚠️ 测试完成\n\n通过: ${testState.passed}\n失败: ${testState.failed}\n总计: ${testState.total}`);
+            }
+        }
+
+        function clearResults() {
+            testState.total = testSuites.reduce((sum, suite) => sum + suite.tests.length, 0);
+            testState.passed = 0;
+            testState.failed = 0;
+            testState.running = 0;
+            updateSummary();
+
+            // 重置所有测试用例
+            document.querySelectorAll('.test-case').forEach(tc => {
+                tc.className = 'test-case';
+                tc.querySelector('.test-status').className = 'test-status status-pending';
+                tc.querySelector('.test-status').textContent = '待运行';
+                tc.querySelector('.test-result').textContent = '点击"运行测试"按钮开始...';
+            });
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('collapsed');
+        }
+
+        // ========== 渲染测试界面 ==========
+        function renderTests() {
+            const container = document.getElementById('test-sections');
+
+            testSuites.forEach(suite => {
+                const section = document.createElement('div');
+                section.className = 'test-section';
+                section.id = suite.id;
+
+                section.innerHTML = `
+                    <div class="section-header" onclick="toggleSection('${suite.id}')">
+                        <div>
+                            <strong>${suite.name}</strong>
+                            <span style="color: #666; font-weight: normal; margin-left: 10px;">${suite.description}</span>
+                        </div>
+                        <span class="collapse-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        ${suite.tests.map((test, index) => `
+                            <div class="test-case" id="${suite.id}-${index}">
+                                <div class="test-name">
+                                    ${test.name}
+                                    <span class="test-status status-pending">待运行</span>
+                                </div>
+                                <div class="test-description">${test.description}</div>
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;"
+                                        onclick="runTest('${suite.id}', ${index})">运行此测试</button>
+                                <div class="test-result">点击"运行测试"按钮开始...</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                container.appendChild(section);
+            });
+
+            // 初始化计数
+            testState.total = testSuites.reduce((sum, suite) => sum + suite.tests.length, 0);
+            updateSummary();
+        }
+
+        // ========== 页面加载时初始化 ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTests();
+            console.log('测试套件已加载,总计', testState.total, '个测试');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: #4CAF50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .warning { color: #ff9800; font-weight: bold; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976D2; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 考研背诵系统 - API诊断工具</h1>
+
+    <div class="test-box">
+        <h2>1. 环境检查</h2>
+        <div id="env-check">
+            <p>正在检查...</p>
+        </div>
+    </div>
+
+    <div class="test-box">
+        <h2>2. API连接测试</h2>
+        <button onclick="testAPI()">测试所有API</button>
+        <div id="api-test" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>3. 解决方案</h2>
+        <div id="solutions"></div>
+    </div>
+
+    <script>
+        // 环境检查
+        function checkEnvironment() {
+            const envDiv = document.getElementById('env-check');
+            let html = '';
+
+            // 检查协议
+            const protocol = window.location.protocol;
+            if (protocol === 'file:') {
+                html += '<p class="error">❌ 错误：您正在使用 file:// 协议直接打开HTML文件</p>';
+                html += '<p class="warning">⚠️ PHP需要通过HTTP服务器运行，不能直接打开HTML文件！</p>';
+
+                document.getElementById('solutions').innerHTML = `
+                    <div class="step">
+                        <h3>解决方法1：使用PHP内置服务器（推荐）</h3>
+                        <p>1. 打开命令行/终端</p>
+                        <p>2. 进入项目目录：</p>
+                        <pre>cd "${window.location.pathname.replace('/index.html', '').replace('file:///', '')}"</pre>
+                        <p>3. 启动PHP服务器：</p>
+                        <pre>php -S localhost:8000</pre>
+                        <p>4. 在浏览器访问：<a href="http://localhost:8000" target="_blank">http://localhost:8000</a></p>
+                    </div>
+
+                    <div class="step">
+                        <h3>解决方法2：使用XAMPP/WampServer</h3>
+                        <p>1. 安装XAMPP：<a href="https://www.apachefriends.org/" target="_blank">下载地址</a></p>
+                        <p>2. 将项目文件夹复制到：<code>C:\\xampp\\htdocs\\q_web</code></p>
+                        <p>3. 启动Apache</p>
+                        <p>4. 访问：<a href="http://localhost/q_web" target="_blank">http://localhost/q_web</a></p>
+                    </div>
+
+                    <div class="step">
+                        <h3>解决方法3：使用phpStudy（中文界面）</h3>
+                        <p>1. 安装phpStudy：<a href="https://www.xp.cn/" target="_blank">下载地址</a></p>
+                        <p>2. 在phpStudy中设置网站目录</p>
+                        <p>3. 一键启动</p>
+                    </div>
+                `;
+            } else if (protocol === 'http:' || protocol === 'https:') {
+                html += '<p class="success">✅ 协议正确：' + protocol + '</p>';
+                html += '<p class="success">✅ 当前URL：' + window.location.href + '</p>';
+
+                document.getElementById('solutions').innerHTML = '<p class="success">✅ 环境配置正确！如果API测试失败，请检查PHP文件。</p>';
+            }
+
+            envDiv.innerHTML = html;
+        }
+
+        // 测试API
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-test');
+            resultDiv.innerHTML = '<p>正在测试...</p>';
+
+            const apis = [
+                { name: '获取当前天数', url: 'api/get_current_day.php' },
+                { name: '获取知识点', url: 'api/get_points.php?day=1' },
+                { name: '获取统计', url: 'api/get_stats.php' }
+            ];
+
+            let html = '<table style="width:100%; border-collapse: collapse;">';
+            html += '<tr style="background:#f0f0f0;"><th style="padding:10px;">API</th><th>状态</th><th>详情</th></tr>';
+
+            for (const api of apis) {
+                try {
+                    const response = await fetch(api.url);
+                    const text = await response.text();
+
+                    // 尝试解析JSON
+                    let result;
+                    try {
+                        result = JSON.parse(text);
+                        if (result.success) {
+                            html += `<tr><td style="padding:10px;">${api.name}</td><td class="success">✅ 成功</td><td><pre>${JSON.stringify(result, null, 2).substring(0, 200)}...</pre></td></tr>`;
+                        } else {
+                            html += `<tr><td style="padding:10px;">${api.name}</td><td class="error">❌ 失败</td><td>${result.error}</td></tr>`;
+                        }
+                    } catch (e) {
+                        // 不是JSON，可能是PHP错误
+                        html += `<tr><td style="padding:10px;">${api.name}</td><td class="error">❌ PHP错误</td><td><pre>${text.substring(0, 300)}...</pre></td></tr>`;
+                    }
+                } catch (error) {
+                    html += `<tr><td style="padding:10px;">${api.name}</td><td class="error">❌ 请求失败</td><td>${error.message}</td></tr>`;
+                }
+            }
+
+            html += '</table>';
+            resultDiv.innerHTML = html;
+        }
+
+        // 页面加载时自动检查
+        window.onload = checkEnvironment;
+    </script>
+</body>
+</html>

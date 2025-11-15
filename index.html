@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="考研心理学知识点背诵系统 - 动态智能管理">
+    <title>考研知识点背诵 - 30天冲刺计划</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <!-- 初始化面板 -->
+    <div class="init-panel" id="init-panel" style="display: none;">
+        <div class="init-content">
+            <h2>🚀 系统初始化</h2>
+            <p class="init-desc">请选择学习开始日期，系统将自动分配所有题目到30天</p>
+            <div class="init-form">
+                <label for="start-date-input">开始日期：</label>
+                <input type="date" id="start-date-input" class="date-input">
+                <button class="btn btn-primary" id="init-btn">开始初始化</button>
+            </div>
+            <p class="init-note">⚠️ 初始化将清空之前的所有学习记录</p>
+        </div>
+    </div>
+
+    <!-- 页面容器 -->
+    <div class="container" id="main-container">
+        <!-- 顶部信息栏 -->
+        <header class="header">
+            <h1 class="title">📚 考研知识点背诵</h1>
+            <p class="subtitle">30天冲刺计划</p>
+        </header>
+
+        <!-- 日期选择器 -->
+        <div class="day-selector">
+            <button class="day-nav-btn" id="prev-day-btn">⬅️ 前一天</button>
+            <div class="day-display">
+                <select id="day-select" class="day-select">
+                    <!-- 动态生成1-30天的选项 -->
+                </select>
+                <span class="current-date" id="current-date">加载中...</span>
+            </div>
+            <button class="day-nav-btn" id="next-day-btn">后一天 ➡️</button>
+        </div>
+
+        <!-- 进度信息卡片 -->
+        <div class="progress-card">
+            <div class="progress-item">
+                <div class="progress-label">当前天数</div>
+                <div class="progress-value" id="current-day">1</div>
+            </div>
+            <div class="progress-divider"></div>
+            <div class="progress-item">
+                <div class="progress-label">今日剩余</div>
+                <div class="progress-value" id="remaining-points">0</div>
+            </div>
+            <div class="progress-divider"></div>
+            <div class="progress-item">
+                <div class="progress-label">剩余天数</div>
+                <div class="progress-value" id="remaining-days">30</div>
+            </div>
+        </div>
+
+        <!-- 知识点显示区域 -->
+        <div class="knowledge-card">
+            <div class="knowledge-header">
+                <span class="knowledge-badge" id="subject-badge">科目</span>
+                <span class="knowledge-index" id="point-index">1/14</span>
+            </div>
+
+            <div class="knowledge-content">
+                <h2 class="knowledge-title">
+                    <span id="knowledge-point">正在加载知识点...</span>
+                    <span class="status-badge" id="status-badge"></span>
+                </h2>
+            </div>
+
+            <div class="knowledge-details" id="knowledge-details" style="display: none;">
+                <div class="detail-item">
+                    <span class="detail-label">章节：</span>
+                    <span id="chapter-info">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">页码：</span>
+                    <span id="page-info">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航按钮组 -->
+        <div class="nav-group">
+            <button class="btn btn-nav" id="prev-point-btn">
+                <span class="btn-icon">◀️</span>
+                上一题
+            </button>
+            <button class="btn btn-nav" id="next-point-btn-nav">
+                <span class="btn-icon">▶️</span>
+                下一题
+            </button>
+        </div>
+
+        <!-- 操作按钮组 -->
+        <div class="button-group">
+            <button class="btn btn-success" id="remember-btn">
+                <span class="btn-icon">✅</span>
+                记得
+            </button>
+            <button class="btn btn-danger" id="forget-btn">
+                <span class="btn-icon">❌</span>
+                忘记
+            </button>
+        </div>
+
+        <!-- 辅助按钮 -->
+        <div class="aux-buttons">
+            <button class="btn btn-secondary" id="show-btn">
+                <span class="btn-icon">👁️</span>
+                显示详情
+            </button>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats-card">
+            <div class="stats-item">
+                <div class="stats-label">总知识点</div>
+                <div class="stats-value" id="total-points">403</div>
+            </div>
+            <div class="stats-item">
+                <div class="stats-label">已完成</div>
+                <div class="stats-value" id="completed-points">0</div>
+            </div>
+            <div class="stats-item">
+                <div class="stats-label">完成率</div>
+                <div class="stats-value" id="completion-rate">0%</div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <p>💪 坚持就是胜利！加油！</p>
+            <p class="footer-note">提示：支持键盘快捷键 - Enter(记得) / →(下一题) / D(详情)</p>
+            <div class="footer-reset">
+                <button class="btn-reset-link" id="reset-btn">🔄 重置系统</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 加载JavaScript -->
+    <script src="assets/script.js"></script>
+</body>
+</html>
