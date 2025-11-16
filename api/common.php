@@ -275,6 +275,38 @@ function updatePointStatus($pointId, $status, $forgottenCount = null) {
 }
 
 /**
+ * 将知识点状态恢复为pending（取消标记）
+ *
+ * @param int $pointId 知识点ID
+ * @param int|null $forgottenCount 忘记次数（可选）
+ * @return bool 成功返回true
+ */
+function updatePointStatusToPending($pointId, $forgottenCount = null) {
+    try {
+        $db = getDB();
+
+        $sql = "UPDATE points SET status = ?, completed_at = NULL, updated_at = datetime('now')";
+        $params = [STATUS_PENDING];
+
+        if ($forgottenCount !== null) {
+            $sql .= ", forgotten_count = ?";
+            $params[] = $forgottenCount;
+        }
+
+        $sql .= " WHERE id = ?";
+        $params[] = $pointId;
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+
+        return true;
+    } catch (Exception $e) {
+        error_log("恢复知识点状态为pending失败 ($pointId): " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * 添加知识点历史记录
  *
  * @param int $pointId 知识点ID
