@@ -156,7 +156,7 @@ bread_review/
 ### Q: 初始化失败怎么办？
 A: 检查：
 1. data目录是否存在且有写权限
-2. 是否已运行 `python generate_pool.py`
+2. 是否已运行 `python scripts/generate_pool.py`
 3. PHP服务器是否正常运行
 
 ### Q: 今日剩余数显示不正确？
