@@ -2,7 +2,7 @@
 /**
  * 系统重置API
  * 功能：
- * 1. 删除每日分配数据（daily_assignments.json）
+ * 1. 删除每日分配数据
  * 2. 重置题库中所有题目状态为pending
  * 3. 清空所有学习记录
  *
@@ -25,45 +25,48 @@ if ($confirm !== true) {
     errorResponse('请确认要执行重置操作', 400);
 }
 
-// ========== 执行重置 ==========
+try {
+    $db = getDB();
 
-// 1. 重置每日分配文件
-$emptyAssignments = [
-    'meta' => [
-        'lastUpdated' => date('Y-m-d\TH:i:s'),
-        'resetAt' => date('Y-m-d\TH:i:s')
-    ]
-];
+    // 开始事务
+    $db->beginTransaction();
 
-if (!writeJsonFile(DAILY_ASSIGNMENTS_FILE, $emptyAssignments)) {
-    errorResponse('无法重置每日分配文件，请检查文件权限', 500);
-}
+    // ========== 执行重置 ==========
 
-// 2. 重置题库中所有题目状态
-$pool = readJsonFile(POINTS_POOL_FILE);
-if ($pool) {
-    // 重置所有题目
-    foreach ($pool['points'] as &$point) {
-        $point['status'] = STATUS_PENDING;
-        $point['assignedDay'] = null;
-        $point['completedAt'] = null;
-        $point['forgottenCount'] = 0;
-        $point['history'] = [];
+    // 1. 清空每日分配
+    $db->exec("DELETE FROM daily_assignments");
+
+    // 2. 重置所有题目状态
+    $db->exec("
+        UPDATE points
+        SET status = 'pending',
+            assigned_day = NULL,
+            completed_at = NULL,
+            forgotten_count = 0,
+            updated_at = datetime('now')
+    ");
+
+    // 3. 清空历史记录
+    $db->exec("DELETE FROM point_history");
+
+    // 4. 更新配置
+    setConfig('lastUpdated', date('Y-m-d\TH:i:s'));
+    setConfig('resetAt', date('Y-m-d\TH:i:s'));
+
+    // 提交事务
+    $db->commit();
+
+    // 返回成功响应
+    successResponse([
+        'resetAt' => date('Y-m-d\TH:i:s'),
+        'message' => '系统已成功重置'
+    ], '系统重置成功');
+
+} catch (Exception $e) {
+    // 回滚事务
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
     }
-    unset($point);
-
-    // 更新配置
-    $pool['config']['lastUpdated'] = date('Y-m-d\TH:i:s');
-    $pool['config']['resetAt'] = date('Y-m-d\TH:i:s');
-
-    // 保存题库
-    if (!writeJsonFile(POINTS_POOL_FILE, $pool)) {
-        errorResponse('无法重置题库文件，请检查文件权限', 500);
-    }
+    error_log('系统重置失败: ' . $e->getMessage());
+    errorResponse('系统重置失败: ' . $e->getMessage(), 500);
 }
-
-// 返回成功响应
-successResponse([
-    'resetAt' => date('Y-m-d\TH:i:s'),
-    'message' => '系统已成功重置'
-], '系统重置成功');

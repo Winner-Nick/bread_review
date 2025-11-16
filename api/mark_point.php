@@ -1,7 +1,7 @@
 <?php
 /**
  * 标记知识点状态API
- * 简化版：仅在JSON中标记状态，不重新分配题目
+ * 在数据库中标记状态
  * 支持的操作：
  * - remember: 记得（标记为remembered）
  * - forget: 忘记（标记为forgotten）
@@ -30,99 +30,64 @@ if (!in_array($action, ['remember', 'forget'])) {
     errorResponse('无效的操作类型（仅支持 remember 和 forget）', 400);
 }
 
-// 读取题库和分配
-$pool = readJsonFile(POINTS_POOL_FILE);
-$assignments = readJsonFile(DAILY_ASSIGNMENTS_FILE);
+try {
+    $db = getDB();
 
-if (!$pool || !$assignments) {
-    errorResponse('无法读取数据文件', 500);
-}
+    // 获取知识点以验证存在性
+    $point = getPointById($pointId);
+    if (!$point) {
+        errorResponse('题目不存在', 404);
+    }
 
-// 如果未指定day，使用当前天数
-if ($day <= 0) {
-    $day = getCurrentDay($pool['config']['startDate']);
-}
-
-$dayKey = 'day_' . $day;
-
-// 确保该天的分配存在
-if (!isset($assignments[$dayKey])) {
-    errorResponse('该天的分配不存在，请先完成系统初始化', 400);
-}
-
-// ========== 执行标记操作 ==========
-
-if ($action === 'remember') {
-    // 标记"记得"
-    // 1. 更新题库状态
-    foreach ($pool['points'] as &$point) {
-        if ($point['id'] == $pointId) {
-            $point['status'] = STATUS_REMEMBERED;
-            $point['completedAt'] = date('Y-m-d H:i:s');
-            $point['history'][] = [
-                'action' => 'remembered',
-                'timestamp' => date('Y-m-d H:i:s'),
-                'day' => $day
-            ];
-            break;
+    // 如果未指定day，使用当前天数
+    if ($day <= 0) {
+        $startDate = getConfig('startDate');
+        if (!$startDate) {
+            errorResponse('系统尚未初始化', 400);
         }
-    }
-    unset($point);
-
-    // 2. 更新每日分配：添加到completed列表
-    if (!in_array($pointId, $assignments[$dayKey]['completed'])) {
-        $assignments[$dayKey]['completed'][] = $pointId;
+        $day = getCurrentDay($startDate);
     }
 
-    // 3. 从forgotten列表中移除（如果存在）
-    $assignments[$dayKey]['forgotten'] = array_values(
-        array_diff($assignments[$dayKey]['forgotten'], [$pointId])
-    );
-
-} elseif ($action === 'forget') {
-    // 标记"忘记"
-    // 1. 更新题库状态
-    foreach ($pool['points'] as &$point) {
-        if ($point['id'] == $pointId) {
-            $point['status'] = STATUS_FORGOTTEN;
-            $point['forgottenCount']++;
-            $point['history'][] = [
-                'action' => 'forgotten',
-                'timestamp' => date('Y-m-d H:i:s'),
-                'day' => $day
-            ];
-            break;
-        }
-    }
-    unset($point);
-
-    // 2. 更新每日分配：添加到forgotten列表
-    if (!in_array($pointId, $assignments[$dayKey]['forgotten'])) {
-        $assignments[$dayKey]['forgotten'][] = $pointId;
+    // 验证该天的分配存在
+    $assignment = getDailyAssignment($day);
+    if (!$assignment) {
+        errorResponse('该天的分配不存在，请先完成系统初始化', 400);
     }
 
-    // 3. 从completed列表中移除（如果存在）
-    $assignments[$dayKey]['completed'] = array_values(
-        array_diff($assignments[$dayKey]['completed'], [$pointId])
-    );
+    // 开始事务
+    $db->beginTransaction();
+
+    // ========== 执行标记操作 ==========
+
+    if ($action === 'remember') {
+        // 标记"记得"
+        updatePointStatus($pointId, STATUS_REMEMBERED);
+        addPointHistory($pointId, 'remembered', $day);
+
+    } elseif ($action === 'forget') {
+        // 标记"忘记"
+        // 获取当前forgottenCount并增加
+        $currentCount = $point['forgottenCount'];
+        $newCount = $currentCount + 1;
+        updatePointStatus($pointId, STATUS_FORGOTTEN, $newCount);
+        addPointHistory($pointId, 'forgotten', $day);
+    }
+
+    // 提交事务
+    $db->commit();
+
+    // 返回成功响应
+    successResponse([
+        'pointId' => $pointId,
+        'action' => $action,
+        'day' => $day
+    ], '操作成功');
+
+} catch (Exception $e) {
+    // 回滚事务
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
+    }
+    error_log('标记知识点失败: ' . $e->getMessage());
+    errorResponse('标记知识点失败: ' . $e->getMessage(), 500);
 }
-
-// 更新lastUpdated时间
-$pool['config']['lastUpdated'] = date('Y-m-d\TH:i:s');
-$assignments['meta']['lastUpdated'] = date('Y-m-d\TH:i:s');
-
-// 保存更新
-if (!writeJsonFile(POINTS_POOL_FILE, $pool)) {
-    errorResponse('无法保存题库文件，请检查文件权限', 500);
-}
-
-if (!writeJsonFile(DAILY_ASSIGNMENTS_FILE, $assignments)) {
-    errorResponse('无法保存每日分配文件，请检查文件权限', 500);
-}
-
-// 返回成功响应
-successResponse([
-    'pointId' => $pointId,
-    'action' => $action,
-    'day' => $day
-], '操作成功');
