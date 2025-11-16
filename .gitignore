@@ -40,3 +40,14 @@ package-lock.json
 
 # PHPUnit cache
 .phpunit.result.cache
+
+# Database files (SQLite)
+/database/*.db
+/database/*.db-*
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Keep JSON data for backup/migration
+# /data/*.json

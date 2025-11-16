@@ -35,93 +35,110 @@ try {
     errorResponse('无效的日期: ' . $startDate, 400);
 }
 
-// 读取题库
-$pool = readJsonFile(POINTS_POOL_FILE);
-if (!$pool || !isset($pool['points'])) {
-    errorResponse('无法读取题库文件，请先运行 scripts/generate_pool.py 生成题库', 500);
-}
+try {
+    $db = getDB();
 
-// ========== 执行初始化 ==========
+    // 开始事务
+    $db->beginTransaction();
 
-// 1. 更新配置中的开始日期
-$pool['config']['startDate'] = $startDate;
-$pool['config']['lastUpdated'] = date('Y-m-d\TH:i:s');
+    // ========== 执行初始化 ==========
 
-// 2. 重置所有题目状态
-foreach ($pool['points'] as &$point) {
-    $point['status'] = STATUS_PENDING;
-    $point['assignedDay'] = null;
-    $point['completedAt'] = null;
-    $point['forgottenCount'] = 0;
-    $point['history'] = [];
-}
-unset($point);
+    // 1. 更新配置中的开始日期
+    setConfig('startDate', $startDate);
+    setConfig('lastUpdated', date('Y-m-d\TH:i:s'));
 
-// 3. 获取所有题目ID并打乱
-$allPointIds = array_map(function($p) { return $p['id']; }, $pool['points']);
+    // 2. 获取所有题目并重置状态
+    $stmt = $db->query("SELECT COUNT(*) as count FROM points");
+    $result = $stmt->fetch();
+    $totalPoints = (int)$result['count'];
 
-// 4. 平均分配到30天
-$totalDays = 30;
-$totalPoints = count($allPointIds);
-$avgPointsPerDay = (int)($totalPoints / $totalDays);
-$remainder = $totalPoints % $totalDays;
-
-$assignments = [
-    'meta' => [
-        'lastUpdated' => date('Y-m-d\TH:i:s'),
-        'initializedAt' => date('Y-m-d\TH:i:s'),
-        'startDate' => $startDate
-    ]
-];
-
-$currentIndex = 0;
-for ($day = 1; $day <= $totalDays; $day++) {
-    // 计算该天日期
-    $dayDate = clone $dateObj;
-    $dayDate->modify('+' . ($day - 1) . ' days');
-
-    // 计算该天应分配的题目数（前几天多分配余数）
-    $pointsThisDay = $avgPointsPerDay;
-    if ($day <= $remainder) {
-        $pointsThisDay++;
+    if ($totalPoints === 0) {
+        $db->rollBack();
+        errorResponse('题库为空，请先运行 scripts/generate_pool.py 生成题库', 400);
     }
 
-    // 分配题目ID
-    $dayPointIds = array_slice($allPointIds, $currentIndex, $pointsThisDay);
-    $currentIndex += $pointsThisDay;
+    // 3. 重置所有题目状态
+    $db->exec("
+        UPDATE points
+        SET status = 'pending',
+            assigned_day = NULL,
+            completed_at = NULL,
+            forgotten_count = 0,
+            updated_at = datetime('now')
+    ");
 
-    // 更新题库中的assignedDay
-    foreach ($pool['points'] as &$point) {
-        if (in_array($point['id'], $dayPointIds)) {
-            $point['assignedDay'] = $day;
+    // 4. 清空历史记录
+    $db->exec("DELETE FROM point_history");
+
+    // 5. 获取所有题目ID
+    $stmt = $db->query("SELECT id FROM points ORDER BY id");
+    $allPointIds = [];
+    while ($row = $stmt->fetch()) {
+        $allPointIds[] = (int)$row['id'];
+    }
+
+    // 6. 清空之前的每日分配
+    $db->exec("DELETE FROM daily_assignments");
+
+    // 7. 平均分配到30天
+    $totalDays = 30;
+    $avgPointsPerDay = (int)($totalPoints / $totalDays);
+    $remainder = $totalPoints % $totalDays;
+
+    $currentIndex = 0;
+    for ($day = 1; $day <= $totalDays; $day++) {
+        // 计算该天日期
+        $dayDate = clone $dateObj;
+        $dayDate->modify('+' . ($day - 1) . ' days');
+
+        // 计算该天应分配的题目数（前几天多分配余数）
+        $pointsThisDay = $avgPointsPerDay;
+        if ($day <= $remainder) {
+            $pointsThisDay++;
         }
+
+        // 分配题目ID
+        $dayPointIds = array_slice($allPointIds, $currentIndex, $pointsThisDay);
+        $currentIndex += $pointsThisDay;
+
+        // 更新题库中的assigned_day
+        if (!empty($dayPointIds)) {
+            $placeholders = implode(',', array_fill(0, count($dayPointIds), '?'));
+            $stmt = $db->prepare("UPDATE points SET assigned_day = ? WHERE id IN ($placeholders)");
+            $params = array_merge([$day], $dayPointIds);
+            $stmt->execute($params);
+        }
+
+        // 创建该天的分配记录
+        $stmt = $db->prepare("
+            INSERT INTO daily_assignments (day, date, point_ids, current_index, created_at, updated_at)
+            VALUES (?, ?, ?, 0, datetime('now'), datetime('now'))
+        ");
+        $stmt->execute([$day, $dayDate->format('Y-m-d'), json_encode($dayPointIds)]);
     }
-    unset($point);
 
-    // 创建该天的分配记录
-    $assignments['day_' . $day] = [
-        'date' => $dayDate->format('Y-m-d'),
-        'pointIds' => $dayPointIds,
-        'currentIndex' => 0,
-        'completed' => [],
-        'forgotten' => []
-    ];
+    // 8. 更新配置
+    setConfig('totalDays', (string)$totalDays);
+    setConfig('totalPoints', (string)$totalPoints);
+    setConfig('avgPointsPerDay', (string)$avgPointsPerDay);
+
+    // 提交事务
+    $db->commit();
+
+    // 9. 返回成功响应
+    successResponse([
+        'startDate' => $startDate,
+        'totalDays' => $totalDays,
+        'totalPoints' => $totalPoints,
+        'avgPointsPerDay' => $avgPointsPerDay,
+        'distributionComplete' => true
+    ], '系统初始化成功');
+
+} catch (Exception $e) {
+    // 回滚事务
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
+    }
+    error_log('初始化失败: ' . $e->getMessage());
+    errorResponse('初始化失败: ' . $e->getMessage(), 500);
 }
-
-// 5. 保存更新
-if (!writeJsonFile(POINTS_POOL_FILE, $pool)) {
-    errorResponse('无法保存题库文件，请检查文件权限', 500);
-}
-
-if (!writeJsonFile(DAILY_ASSIGNMENTS_FILE, $assignments)) {
-    errorResponse('无法保存每日分配文件，请检查文件权限', 500);
-}
-
-// 6. 返回成功响应
-successResponse([
-    'startDate' => $startDate,
-    'totalDays' => $totalDays,
-    'totalPoints' => $totalPoints,
-    'avgPointsPerDay' => $avgPointsPerDay,
-    'distributionComplete' => true
-], '系统初始化成功');

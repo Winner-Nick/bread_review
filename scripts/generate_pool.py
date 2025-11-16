@@ -2,17 +2,26 @@
 # -*- coding: utf-8 -*-
 """
 生成初始题库脚本
-只进行随机排序，不预先分配到每天
+将Excel数据导入到SQLite数据库
 """
 
-import json
+import sqlite3
 import random
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
+# 数据库路径
+DB_FILE = Path(__file__).parent.parent / 'database' / 'bread_review.db'
+
 def generate_points_pool():
-    """生成初始题库（仅随机排序）"""
+    """生成初始题库（导入到数据库）"""
+
+    # 检查数据库是否存在
+    if not DB_FILE.exists():
+        print(f'❌ 数据库文件不存在: {DB_FILE}')
+        print('请先运行: php database/init_db.php')
+        return False
 
     # 读取Excel文件
     excel_file = 'psychology_points_grouped_1115.xlsx'
@@ -25,22 +34,26 @@ def generate_points_pool():
         print(f'读取Excel文件失败: {e}')
         return False
 
+    # 连接数据库
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        cursor = conn.cursor()
+        print(f'已连接到数据库: {DB_FILE}')
+    except Exception as e:
+        print(f'连接数据库失败: {e}')
+        return False
+
     # 准备知识点数据
     points = []
     point_id = 1
 
     for _, row in data.iterrows():
         point = {
-            "id": point_id,
-            "科目": str(row['科目']) if pd.notna(row['科目']) else "",
-            "章节": str(row['章节']) if pd.notna(row['章节']) else "",
-            "考点": str(row['考点']) if pd.notna(row['考点']) else "",
-            "页码": str(row['页码']) if pd.notna(row['页码']) else "",
-            "status": "pending",           # pending, completed, forgotten
-            "assignedDay": None,            # 分配到第几天
-            "completedAt": None,            # 完成时间
-            "forgottenCount": 0,            # 忘记次数
-            "history": []                   # 操作历史
+            'id': point_id,
+            'subject': str(row['科目']) if pd.notna(row['科目']) else "",
+            'chapter': str(row['章节']) if pd.notna(row['章节']) else "",
+            'point': str(row['考点']) if pd.notna(row['考点']) else "",
+            'page': str(row['页码']) if pd.notna(row['页码']) else "",
         }
         points.append(point)
         point_id += 1
@@ -49,55 +62,74 @@ def generate_points_pool():
     random.shuffle(points)
     print(f'知识点已随机打乱')
 
-    # 创建题库配置
-    total_points = len(points)
-    total_days = 30
-    avg_points_per_day = total_points // total_days
+    try:
+        # 开始事务
+        cursor.execute("BEGIN TRANSACTION")
 
-    pool_data = {
-        "config": {
-            "startDate": "2025-11-14",      # 起始日期
-            "totalDays": total_days,
-            "avgPointsPerDay": avg_points_per_day,
-            "totalPoints": total_points,
-            "createdAt": datetime.now().isoformat(),
-            "lastUpdated": datetime.now().isoformat()
-        },
-        "points": points
-    }
+        # 清空现有数据
+        cursor.execute("DELETE FROM points")
+        cursor.execute("DELETE FROM daily_assignments")
+        cursor.execute("DELETE FROM point_history")
+        print('已清空现有数据')
 
-    # 保存题库文件
-    output_file = Path('data') / 'points_pool.json'
-    output_file.parent.mkdir(exist_ok=True)
+        # 插入知识点数据
+        insert_sql = """
+            INSERT INTO points (id, subject, chapter, point, page, status, assigned_day, completed_at, forgotten_count, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', NULL, NULL, 0, datetime('now'), datetime('now'))
+        """
 
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(pool_data, f, ensure_ascii=False, indent=2)
+        for point in points:
+            cursor.execute(insert_sql, (
+                point['id'],
+                point['subject'],
+                point['chapter'],
+                point['point'],
+                point['page']
+            ))
 
-    print(f'\n题库文件已生成: {output_file}')
+        print(f'已插入 {len(points)} 条知识点')
+
+        # 更新配置
+        total_points = len(points)
+        total_days = 30
+        avg_points_per_day = total_points // total_days
+
+        config_updates = [
+            ('totalPoints', str(total_points)),
+            ('totalDays', str(total_days)),
+            ('avgPointsPerDay', str(avg_points_per_day)),
+            ('createdAt', datetime.now().isoformat()),
+            ('lastUpdated', datetime.now().isoformat())
+        ]
+
+        for key, value in config_updates:
+            cursor.execute(
+                "INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+                (key, value)
+            )
+
+        # 提交事务
+        conn.commit()
+        print('数据已成功保存到数据库')
+
+    except Exception as e:
+        conn.rollback()
+        print(f'保存数据失败: {e}')
+        return False
+    finally:
+        conn.close()
+
+    print(f'\n题库已生成到数据库: {DB_FILE}')
     print(f'配置信息:')
-    print(f'  - 起始日期: {pool_data["config"]["startDate"]}')
-    print(f'  - 总天数: {pool_data["config"]["totalDays"]}')
-    print(f'  - 总知识点: {pool_data["config"]["totalPoints"]}')
-    print(f'  - 平均每天: {pool_data["config"]["avgPointsPerDay"]}')
-
-    # 创建空的每日分配文件
-    assignments_file = Path('data') / 'daily_assignments.json'
-    initial_assignments = {
-        "meta": {
-            "lastUpdated": datetime.now().isoformat()
-        }
-    }
-
-    with open(assignments_file, 'w', encoding='utf-8') as f:
-        json.dump(initial_assignments, f, ensure_ascii=False, indent=2)
-
-    print(f'\n每日分配文件已初始化: {assignments_file}')
+    print(f'  - 总天数: {total_days}')
+    print(f'  - 总知识点: {total_points}')
+    print(f'  - 平均每天: {avg_points_per_day}')
 
     return True
 
 if __name__ == '__main__':
     print('=' * 60)
-    print('考研知识点背诵系统 - 题库生成器 V2')
+    print('考研知识点背诵系统 - 题库生成器 V3 (数据库版)')
     print('=' * 60)
     print()
 
@@ -106,7 +138,7 @@ if __name__ == '__main__':
     if success:
         print('\n✅ 题库生成成功！')
         print('\n下一步：')
-        print('  1. 运行 init_database.php 初始化系统')
+        print('  1. 访问 API: api/initialize.php 初始化系统（POST请求）')
         print('  2. 访问 index.html 开始使用')
     else:
         print('\n❌ 题库生成失败！')

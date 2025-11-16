@@ -8,24 +8,33 @@
 ```bash
 # 确保已安装Python和必要的库
 pip install pandas openpyxl
+
+# 确保PHP已安装SQLite PDO扩展
+php -m | grep -E "PDO|sqlite"
 ```
 
-### 2. 生成题库
+### 2. 初始化数据库
 ```bash
-# 运行题库生成脚本
+# 创建SQLite数据库
+php database/init_db.php
+```
+
+### 3. 生成题库
+```bash
+# 运行题库生成脚本（将Excel数据导入数据库）
 python scripts/generate_pool.py
 ```
 
-### 3. 启动服务器
+### 4. 启动服务器
 ```bash
 # 启动PHP内置服务器
 php -S localhost:8000
 ```
 
-### 4. 访问系统
+### 5. 访问系统
 打开浏览器访问：[http://localhost:8000](http://localhost:8000)
 
-### 5. 初始化系统
+### 6. 初始化系统
 - 首次访问会显示初始化界面
 - 选择学习开始日期（默认今天）
 - 点击"开始初始化"按钮
@@ -98,11 +107,22 @@ php -S localhost:8000
 4. 系统自动清空所有数据并刷新页面
 5. 重新选择开始日期并初始化
 
-### 方法2：手动重置
+### 方法2：通过API重置
 
-1. 删除 `data/daily_assignments.json`
-2. 刷新浏览器
-3. 重新选择开始日期并初始化
+```bash
+curl -X POST http://localhost:8000/api/reset.php \
+  -H "Content-Type: application/json" \
+  -d '{"confirm": true}'
+```
+
+### 方法3：重新初始化数据库
+
+```bash
+# 删除数据库并重新初始化
+rm database/bread_review.db
+php database/init_db.php
+python scripts/generate_pool.py
+```
 
 **⚠️ 重要提示**：
 - 重置会清空**所有学习记录和标记**
@@ -114,7 +134,8 @@ php -S localhost:8000
 
 - **前端**：HTML + CSS + JavaScript（原生，无框架）
 - **后端**：PHP（无框架）
-- **数据**：JSON文件
+- **数据库**：SQLite 3
+- **数据访问**：PDO (PHP Data Objects)
 - **初始化**：Python脚本
 
 ## 项目结构
@@ -126,16 +147,22 @@ bread_review/
 │   ├── script.js          # 前端逻辑
 │   └── style.css          # 样式文件
 ├── api/                   # PHP API接口
-│   ├── common.php         # 共用函数库
+│   ├── common.php         # 共用函数库（数据库操作）
 │   ├── initialize.php     # 系统初始化
 │   ├── get_init_status.php # 检查初始化状态
 │   ├── get_current_day.php # 获取当前天数
 │   ├── get_points.php     # 获取题目
 │   ├── mark_point.php     # 标记题目状态
-│   └── get_stats.php      # 获取统计信息
-├── data/                  # 数据文件目录
-│   ├── points_pool.json
-│   └── daily_assignments.json
+│   ├── get_stats.php      # 获取统计信息
+│   └── reset.php          # 重置系统
+├── database/              # 数据库目录
+│   ├── schema.sql         # 数据库Schema
+│   ├── init_db.php        # 数据库初始化脚本
+│   ├── migrate_from_json.php # JSON迁移脚本
+│   └── bread_review.db    # SQLite数据库文件（运行时生成）
+├── data/                  # 数据文件目录（保留用于备份）
+│   ├── points_pool.json   # 题库数据（旧版）
+│   └── daily_assignments.json # 每日分配（旧版）
 ├── excel/                 # Excel数据源
 ├── scripts/               # 脚本文件
 │   └── generate_pool.py  # 题库生成脚本
@@ -258,7 +285,45 @@ npm run test:coverage                  # With coverage
 - 原有测试文档：`docs/README_TEST.md`
 - 调试重置文档：`docs/DEBUG_RESET.md`
 
+## 数据库迁移
+
+如果你从旧版本（使用JSON文件）升级到新版本（使用SQLite数据库），请按以下步骤迁移：
+
+1. **备份现有数据**
+   ```bash
+   cp -r data/ data_backup/
+   ```
+
+2. **初始化数据库**
+   ```bash
+   php database/init_db.php
+   ```
+
+3. **从JSON迁移数据**
+   ```bash
+   php database/migrate_from_json.php
+   ```
+
+4. **验证迁移结果**
+   - 访问系统检查数据是否正确
+   - 查看学习进度是否保留
+
+详细说明请参考：
+- `docs/DATABASE_MIGRATION.md` - 迁移指南
+- `docs/DATABASE_ARCHITECTURE.md` - 数据库架构说明
+- `docs/REQUIREMENTS.md` - 系统要求
+
 ## 版本历史
+
+### V4.0 (2025-11-16)
+- ✅ **重大更新**：从JSON文件迁移到SQLite数据库
+- ✅ 提升性能和数据完整性
+- ✅ 添加事务支持保证数据一致性
+- ✅ 优化查询性能，添加索引
+- ✅ 支持复杂统计查询
+- ✅ 提供JSON到数据库的迁移脚本
+- ✅ 完善的数据库Schema设计
+- ✅ 详细的迁移文档
 
 ### V3.1 (2025-11-15)
 - ✅ 新增系统重置功能
