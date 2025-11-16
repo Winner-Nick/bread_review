@@ -38,7 +38,7 @@ try {
 // 读取题库
 $pool = readJsonFile(POINTS_POOL_FILE);
 if (!$pool || !isset($pool['points'])) {
-    errorResponse('无法读取题库文件，请先运行 generate_pool.py 生成题库', 500);
+    errorResponse('无法读取题库文件，请先运行 scripts/generate_pool.py 生成题库', 500);
 }
 
 // ========== 执行初始化 ==========

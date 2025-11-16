@@ -33,7 +33,7 @@
 
 ### 第一步：生成题库
 ```bash
-python generate_pool.py
+python scripts/generate_pool.py
 ```
 
 预期结果：
@@ -167,13 +167,13 @@ python generate_pool.py
 ### 问题1：初始化失败
 **可能原因**：
 - data目录不存在或无写权限
-- points_pool.json不存在（需先运行generate_pool.py）
+- points_pool.json不存在（需先运行scripts/generate_pool.py）
 
 **解决方案**：
 ```bash
 mkdir data
 chmod 777 data
-python generate_pool.py
+python scripts/generate_pool.py
 ```
 
 ### 问题2：API返回非JSON内容

@@ -13,7 +13,7 @@ pip install pandas openpyxl
 ### 2. 生成题库
 ```bash
 # 运行题库生成脚本
-python generate_pool.py
+python scripts/generate_pool.py
 ```
 
 ### 3. 启动服务器
@@ -120,7 +120,7 @@ php -S localhost:8000
 ## 项目结构
 
 ```
-q_web/
+bread_review/
 ├── index.html              # 主界面
 ├── assets/
 │   ├── script.js          # 前端逻辑
@@ -136,9 +136,19 @@ q_web/
 ├── data/                  # 数据文件目录
 │   ├── points_pool.json
 │   └── daily_assignments.json
-├── generate_pool.py       # 题库生成脚本
-├── README.md             # 使用说明（本文件）
-└── README_TEST.md        # 详细测试说明
+├── excel/                 # Excel数据源
+├── scripts/               # 脚本文件
+│   └── generate_pool.py  # 题库生成脚本
+├── tests/                 # 测试文件
+│   ├── php/              # PHP测试
+│   ├── python/           # Python测试
+│   ├── js/               # JavaScript测试
+│   └── legacy/           # 旧版测试文件
+├── docs/                  # 文档目录
+│   ├── README_TEST.md    # 测试说明
+│   ├── TESTING.md        # 详细测试文档
+│   └── DEBUG_RESET.md    # 调试重置文档
+└── README.md             # 使用说明（本文件）
 ```
 
 ## 常见问题
@@ -146,7 +156,7 @@ q_web/
 ### Q: 初始化失败怎么办？
 A: 检查：
 1. data目录是否存在且有写权限
-2. 是否已运行 `python generate_pool.py`
+2. 是否已运行 `python scripts/generate_pool.py`
 3. PHP服务器是否正常运行
 
 ### Q: 今日剩余数显示不正确？
@@ -244,10 +254,9 @@ npm run test:coverage                  # With coverage
 
 ## 详细文档
 
-- 详细测试说明：`TESTING.md`
-- 原有测试文档：`README_TEST.md`
-- 重构任务文档：`.agentdocs/workflow/251115-refactor-question-system.md`
-- 项目文档索引：`.agentdocs/index.md`
+- 详细测试说明：`docs/TESTING.md`
+- 原有测试文档：`docs/README_TEST.md`
+- 调试重置文档：`docs/DEBUG_RESET.md`
 
 ## 版本历史
 
