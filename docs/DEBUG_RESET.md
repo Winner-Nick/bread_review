@@ -204,7 +204,7 @@ icacls data /grant Everyone:(OI)(CI)F
 rm data/daily_assignments.json
 
 # 3. 重置题库（可选）
-python generate_pool.py
+python scripts/generate_pool.py
 
 # 4. 重新启动服务器
 php -S localhost:8000
