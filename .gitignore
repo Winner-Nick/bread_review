@@ -1,1 +1,37 @@
 .agentdocs/
+
+# Dependencies
+/vendor/
+/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Test coverage
+/tests/coverage/
+*.coverage
+.coverage.*
+htmlcov/
+coverage/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Composer
+composer.lock
+
+# npm
+package-lock.json
+
+# Test fixtures (temporary files)
+/tests/php/fixtures/temp_data/
+/tests/php/fixtures/test_data/
+/tests/php/fixtures/integration_data/
