@@ -5,6 +5,7 @@
  * 支持的操作：
  * - remember: 记得（标记为remembered）
  * - forget: 忘记（标记为forgotten）
+ * - cancel: 取消标记（恢复为pending状态）
  */
 
 require_once 'common.php';
@@ -26,8 +27,8 @@ if ($pointId <= 0) {
     errorResponse('无效的题目ID', 400);
 }
 
-if (!in_array($action, ['remember', 'forget'])) {
-    errorResponse('无效的操作类型（仅支持 remember 和 forget）', 400);
+if (!in_array($action, ['remember', 'forget', 'cancel'])) {
+    errorResponse('无效的操作类型（仅支持 remember、forget 和 cancel）', 400);
 }
 
 try {
@@ -71,6 +72,16 @@ try {
         $newCount = $currentCount + 1;
         updatePointStatus($pointId, STATUS_FORGOTTEN, $newCount);
         addPointHistory($pointId, 'forgotten', $day);
+
+    } elseif ($action === 'cancel') {
+        // 取消标记，恢复为pending状态
+        // 如果之前是forgotten状态，需要减少forgottenCount
+        $newCount = null;
+        if ($point['status'] === STATUS_FORGOTTEN && $point['forgottenCount'] > 0) {
+            $newCount = $point['forgottenCount'] - 1;
+        }
+        updatePointStatusToPending($pointId, $newCount);
+        addPointHistory($pointId, 'cancelled', $day);
     }
 
     // 提交事务

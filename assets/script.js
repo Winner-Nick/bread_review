@@ -484,27 +484,40 @@ async function handleRemember() {
     if (!state.dayPoints || state.currentIndex >= state.dayPoints.length) return;
 
     const point = state.dayPoints[state.currentIndex];
-    const success = await markPoint(point.id, 'remember', state.currentDay);
+
+    // 如果当前已经是"记得"状态，则取消标记
+    const action = point.status === 'remembered' ? 'cancel' : 'remember';
+    const success = await markPoint(point.id, action, state.currentDay);
 
     if (success) {
-        // 更新本地状态
-        point.status = 'remembered';
+        if (action === 'cancel') {
+            // 取消标记，恢复为pending状态
+            point.status = 'pending';
+            updateStatusBadge('pending');
 
-        // 更新状态标签
-        updateStatusBadge('remembered');
+            // 增加今日剩余（实时更新）
+            const currentRemaining = parseInt(elements.remainingPoints.textContent);
+            elements.remainingPoints.textContent = currentRemaining + 1;
 
-        // 减少今日剩余（实时更新）
-        const currentRemaining = parseInt(elements.remainingPoints.textContent);
-        if (currentRemaining > 0) {
-            elements.remainingPoints.textContent = currentRemaining - 1;
-        }
-
-        // 自动进入下一题
-        if (state.currentIndex < state.dayPoints.length - 1) {
-            state.currentIndex++;
-            displayCurrentPoint();
+            // 不自动跳转，停留在当前题目
         } else {
-            alert('恭喜！今天的知识点已全部完成！');
+            // 标记为"记得"
+            point.status = 'remembered';
+            updateStatusBadge('remembered');
+
+            // 减少今日剩余（实时更新）
+            const currentRemaining = parseInt(elements.remainingPoints.textContent);
+            if (currentRemaining > 0) {
+                elements.remainingPoints.textContent = currentRemaining - 1;
+            }
+
+            // 自动进入下一题
+            if (state.currentIndex < state.dayPoints.length - 1) {
+                state.currentIndex++;
+                displayCurrentPoint();
+            } else {
+                alert('恭喜！今天的知识点已全部完成！');
+            }
         }
 
         // 更新统计
@@ -519,28 +532,42 @@ async function handleForget() {
     if (!state.dayPoints || state.currentIndex >= state.dayPoints.length) return;
 
     const point = state.dayPoints[state.currentIndex];
-    const success = await markPoint(point.id, 'forget', state.currentDay);
+
+    // 如果当前已经是"忘记"状态，则取消标记
+    const action = point.status === 'forgotten' ? 'cancel' : 'forget';
+    const success = await markPoint(point.id, action, state.currentDay);
 
     if (success) {
-        // 更新本地状态
-        point.status = 'forgotten';
+        if (action === 'cancel') {
+            // 取消标记，恢复为pending状态
+            point.status = 'pending';
+            updateStatusBadge('pending');
 
-        // 更新状态标签
-        updateStatusBadge('forgotten');
+            // 重新加载该天数据以更新剩余数量
+            const data = await getPoints(state.currentDay);
+            if (data) {
+                elements.remainingPoints.textContent = data.remainingCount || 0;
+            }
 
-        // 如果之前是"记得"状态，需要增加今日剩余
-        // 这里简单处理：重新加载该天数据以确保准确
-        const data = await getPoints(state.currentDay);
-        if (data) {
-            elements.remainingPoints.textContent = data.remainingCount || 0;
-        }
-
-        // 自动进入下一题
-        if (state.currentIndex < state.dayPoints.length - 1) {
-            state.currentIndex++;
-            displayCurrentPoint();
+            // 不自动跳转，停留在当前题目
         } else {
-            alert('今天的知识点已全部处理！');
+            // 标记为"忘记"
+            point.status = 'forgotten';
+            updateStatusBadge('forgotten');
+
+            // 重新加载该天数据以更新剩余数量
+            const data = await getPoints(state.currentDay);
+            if (data) {
+                elements.remainingPoints.textContent = data.remainingCount || 0;
+            }
+
+            // 自动进入下一题
+            if (state.currentIndex < state.dayPoints.length - 1) {
+                state.currentIndex++;
+                displayCurrentPoint();
+            } else {
+                alert('今天的知识点已全部处理！');
+            }
         }
 
         // 更新统计

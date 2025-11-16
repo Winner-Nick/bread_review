@@ -212,10 +212,39 @@ describe('API Integration Tests', () => {
       expect(data.data.action).toBe('forget');
     });
 
+    test('should cancel point marking', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          pointId: 3,
+          action: 'cancel',
+          day: 1
+        },
+        message: '操作成功'
+      };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const response = await fetch('api/mark_point.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pointId: 3, action: 'cancel', day: 1 })
+      });
+
+      const data = await response.json();
+
+      expect(data.success).toBe(true);
+      expect(data.data.action).toBe('cancel');
+      expect(data.message).toBe('操作成功');
+    });
+
     test('should reject invalid action', async () => {
       const errorResponse = {
         success: false,
-        message: '无效的操作类型（仅支持 remember 和 forget）'
+        message: '无效的操作类型（仅支持 remember、forget 和 cancel）'
       };
 
       global.fetch.mockResolvedValueOnce({
