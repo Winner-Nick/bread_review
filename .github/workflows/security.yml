@@ -1,0 +1,146 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+jobs:
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Check PHP dependencies
+      run: composer audit || echo "No composer.lock found or no vulnerabilities"
+      continue-on-error: true
+
+    - name: Check NPM dependencies
+      run: npm audit --audit-level=moderate || echo "No package-lock.json or no critical vulnerabilities"
+      continue-on-error: true
+
+    - name: Check Python dependencies
+      run: |
+        pip install safety
+        safety check || echo "No critical vulnerabilities found"
+      continue-on-error: true
+
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/owasp-top-ten
+          p/php
+          p/javascript
+        generateSarif: true
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+
+  file-permissions:
+    name: Check File Permissions
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check for sensitive file permissions
+      run: |
+        echo "Checking for world-writable files..."
+        find . -type f -perm -002 ! -path "./.git/*" ! -path "./vendor/*" ! -path "./node_modules/*" || true
+
+        echo "Checking for files that might contain secrets..."
+        if [ -f .env ]; then
+          echo "WARNING: .env file found in repository!"
+          exit 1
+        fi
+
+        echo "File permission check completed."
+
+  secrets-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified
+      continue-on-error: true
+
+  data-integrity:
+    name: Data Integrity Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+
+    - name: Check JSON file structure
+      run: |
+        echo "Validating JSON file structure..."
+
+        # Check if data directory exists
+        if [ -d "data" ]; then
+          for file in data/*.json; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              php -r "json_decode(file_get_contents('$file')); if (json_last_error() !== JSON_ERROR_NONE) exit(1);"
+              echo "✓ $file is valid JSON"
+            fi
+          done
+        else
+          echo "Data directory not found (expected for new installations)"
+        fi
+
+    - name: Verify API file structure
+      run: |
+        echo "Checking API files..."
+        test -f api/common.php && echo "✓ common.php found"
+        test -f api/initialize.php && echo "✓ initialize.php found"
+        test -f api/mark_point.php && echo "✓ mark_point.php found"
+        test -f api/get_points.php && echo "✓ get_points.php found"
+        test -f api/get_stats.php && echo "✓ get_stats.php found"

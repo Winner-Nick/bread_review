@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         verbose="true"
+         testdox="true">
+    <testsuites>
+        <testsuite name="Unit Tests">
+            <directory>tests/php/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration Tests">
+            <directory>tests/php/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">api</directory>
+        </include>
+        <exclude>
+            <directory>vendor</directory>
+        </exclude>
+        <report>
+            <html outputDirectory="tests/coverage/html"/>
+            <text outputFile="php://stdout" showUncoveredFiles="true"/>
+        </report>
+    </coverage>
+    <php>
+        <env name="TEST_MODE" value="true"/>
+    </php>
+</phpunit>
