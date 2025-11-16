@@ -45,7 +45,15 @@ function readJsonFile($filepath) {
 
     // 共享锁（读锁）
     flock($fp, LOCK_SH);
-    $content = fread($fp, filesize($filepath));
+
+    $filesize = filesize($filepath);
+    if ($filesize === 0) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return null;
+    }
+
+    $content = fread($fp, $filesize);
     flock($fp, LOCK_UN);
     fclose($fp);
 

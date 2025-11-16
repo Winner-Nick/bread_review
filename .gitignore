@@ -35,3 +35,8 @@ package-lock.json
 /tests/php/fixtures/temp_data/
 /tests/php/fixtures/test_data/
 /tests/php/fixtures/integration_data/
+/tests/php/fixtures/security_test/
+/tests/php/fixtures/performance_test/
+
+# PHPUnit cache
+.phpunit.result.cache

@@ -189,7 +189,7 @@ class WorkflowTest extends TestCase
         $updatedPool = readJsonFile($this->poolFile);
         $updatedAssignments = readJsonFile($this->assignmentsFile);
 
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
         $this->assertEquals('remembered', $point['status']);
         $this->assertNotNull($point['completedAt']);
         $this->assertContains($pointId, $updatedAssignments['day_1']['completed']);
@@ -255,7 +255,7 @@ class WorkflowTest extends TestCase
         // Verify forgotten state
         $pool = readJsonFile($this->poolFile);
         $assignments = readJsonFile($this->assignmentsFile);
-        $point = array_filter($pool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($pool['points'], fn($p) => $p['id'] == $pointId))[0];
 
         $this->assertEquals('forgotten', $point['status']);
         $this->assertEquals(1, $point['forgottenCount']);
@@ -290,7 +290,7 @@ class WorkflowTest extends TestCase
         // Verify final state
         $finalPool = readJsonFile($this->poolFile);
         $finalAssignments = readJsonFile($this->assignmentsFile);
-        $finalPoint = array_filter($finalPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $finalPoint = array_values(array_filter($finalPool['points'], fn($p) => $p['id'] == $pointId))[0];
 
         $this->assertEquals('remembered', $finalPoint['status']);
         $this->assertEquals(1, $finalPoint['forgottenCount']); // Should remain 1

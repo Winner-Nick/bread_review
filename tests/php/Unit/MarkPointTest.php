@@ -174,7 +174,7 @@ class MarkPointTest extends TestCase
         $updatedPool = readJsonFile($this->poolFile);
         $updatedAssignments = readJsonFile($this->assignmentsFile);
 
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
         $this->assertEquals('remembered', $point['status']);
         $this->assertNotNull($point['completedAt']);
         $this->assertCount(1, $point['history']);
@@ -217,7 +217,7 @@ class MarkPointTest extends TestCase
         $updatedPool = readJsonFile($this->poolFile);
         $updatedAssignments = readJsonFile($this->assignmentsFile);
 
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
         $this->assertEquals('forgotten', $point['status']);
         $this->assertEquals(1, $point['forgottenCount']);
         $this->assertCount(1, $point['history']);
@@ -281,7 +281,7 @@ class MarkPointTest extends TestCase
         $updatedPool = readJsonFile($this->poolFile);
         $updatedAssignments = readJsonFile($this->assignmentsFile);
 
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
         $this->assertEquals('remembered', $point['status']);
         $this->assertContains($pointId, $updatedAssignments['day_1']['completed']);
         $this->assertNotContains($pointId, $updatedAssignments['day_1']['forgotten']);
@@ -315,7 +315,7 @@ class MarkPointTest extends TestCase
 
         // Assert
         $updatedPool = readJsonFile($this->poolFile);
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
 
         $this->assertEquals(3, $point['forgottenCount']);
         $this->assertCount(3, $point['history']);
@@ -402,7 +402,7 @@ class MarkPointTest extends TestCase
 
         // Assert
         $updatedPool = readJsonFile($this->poolFile);
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
 
         $this->assertCount(3, $point['history']);
         $this->assertEquals('remembered', $point['history'][0]['action']);
@@ -481,7 +481,7 @@ class MarkPointTest extends TestCase
 
         // Assert
         $updatedPool = readJsonFile($this->poolFile);
-        $point = array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId)[0];
+        $point = array_values(array_filter($updatedPool['points'], fn($p) => $p['id'] == $pointId))[0];
 
         $this->assertMatchesRegularExpression(
             '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',

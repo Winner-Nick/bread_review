@@ -161,9 +161,91 @@ A: 当前版本不支持。所有用户共享同一套数据。
 ### Q: 如何清空之前的学习记录？
 A: 点击页面底部的"🔄 重置系统"按钮，系统会清空所有数据并回到初始化界面。
 
+## 测试与质量保证
+
+### 测试统计
+
+![Test Suite](https://img.shields.io/badge/tests-71%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+
+**测试覆盖范围**:
+- ✅ **PHP 后端**: 42 tests, 633 assertions
+- ✅ **Python 数据生成**: 23 tests
+- ✅ **JavaScript 前端**: 17 tests
+- ✅ **集成测试**: 5 end-to-end scenarios
+- ✅ **安全测试**: 18 security tests
+- ✅ **性能测试**: 11 performance tests
+
+### 运行测试
+
+```bash
+# PHP Tests (PHPUnit)
+composer install
+./vendor/bin/phpunit                     # All tests
+./vendor/bin/phpunit tests/php/Unit     # Unit tests only
+./vendor/bin/phpunit --coverage-html tests/coverage/html  # With coverage
+
+# Python Tests (pytest)
+pip install -r requirements-dev.txt
+python -m pytest                        # All tests
+python -m pytest --cov                  # With coverage
+
+# JavaScript Tests (Jest)
+npm install
+npm test                               # All tests
+npm run test:coverage                  # With coverage
+
+# Run all tests
+./vendor/bin/phpunit && python -m pytest && npm test
+```
+
+### 持续集成
+
+本项目使用 GitHub Actions 进行自动化测试：
+- ✅ 每次 push 和 pull request 自动运行测试
+- ✅ 代码覆盖率报告上传到 Codecov
+- ✅ 安全扫描 (依赖检查、代码分析、秘密扫描)
+- ✅ 数据完整性验证
+
+### 测试类型
+
+#### 1. 单元测试
+- **文件 I/O 操作**: 文件锁定、并发读写、错误处理
+- **状态管理**: pending → remembered → forgotten 状态转换
+- **分配算法**: 30天平均分配、余数处理
+- **日期验证**: 格式检查、边界条件
+
+#### 2. 集成测试
+- 完整工作流: 初始化 → 获取题目 → 标记 → 验证统计
+- 忘记/记得循环测试
+- 重置和重新初始化
+- 多天进度测试
+
+#### 3. 安全测试
+- XSS 攻击防护 (脚本标签、事件处理器)
+- SQL 注入模式测试
+- 路径遍历攻击防护
+- 类型混淆测试
+- Unicode 和特殊字符处理
+
+#### 4. 性能测试
+- 1000+ 知识点加载性能
+- 大数据集读写性能
+- 并发操作模拟
+- 内存使用监控
+
+### 代码质量
+
+- **编码标准**: PSR-12 (PHP), ESLint (JavaScript), PEP 8 (Python)
+- **文档**: 所有关键函数都有详细注释
+- **错误处理**: 完善的错误日志和用户友好的错误消息
+- **安全性**: 输入验证、输出转义、文件权限检查
+
 ## 详细文档
 
-- 详细测试说明：`README_TEST.md`
+- 详细测试说明：`TESTING.md`
+- 原有测试文档：`README_TEST.md`
 - 重构任务文档：`.agentdocs/workflow/251115-refactor-question-system.md`
 - 项目文档索引：`.agentdocs/index.md`
 

@@ -28,16 +28,37 @@ class CommonTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Clean up test files
-        if (file_exists($this->testFile)) {
-            unlink($this->testFile);
-        }
-
-        if (is_dir($this->testDataDir)) {
-            rmdir($this->testDataDir);
-        }
+        // Clean up test files recursively
+        $this->recursiveDelete($this->testDataDir);
 
         parent::tearDown();
+    }
+
+    private function recursiveDelete($dir)
+    {
+        if (!file_exists($dir)) {
+            return;
+        }
+
+        if (!is_dir($dir)) {
+            @chmod($dir, 0777);
+            @unlink($dir);
+            return;
+        }
+
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            if (is_dir($path)) {
+                $this->recursiveDelete($path);
+            } else {
+                @chmod($path, 0777);
+                @unlink($path);
+            }
+        }
+
+        @chmod($dir, 0777);
+        @rmdir($dir);
     }
 
     // ========== File Reading Tests ==========
@@ -70,6 +91,11 @@ class CommonTest extends TestCase
 
     public function testReadJsonFile_UnreadableFile_ReturnsNull()
     {
+        // Skip if running as root (permissions don't work)
+        if (posix_getuid() === 0) {
+            $this->markTestSkipped('Cannot test file permissions when running as root');
+        }
+
         // Arrange
         $testData = ['key' => 'value'];
         file_put_contents($this->testFile, json_encode($testData));
@@ -150,6 +176,11 @@ class CommonTest extends TestCase
 
     public function testWriteJsonFile_UnwritableDirectory_ReturnsFalse()
     {
+        // Skip if running as root (permissions don't work)
+        if (posix_getuid() === 0) {
+            $this->markTestSkipped('Cannot test file permissions when running as root');
+        }
+
         // Arrange
         $unwritableDir = $this->testDataDir . '/unwritable';
         mkdir($unwritableDir, 0555); // Read-only directory
@@ -169,6 +200,11 @@ class CommonTest extends TestCase
 
     public function testWriteJsonFile_UnwritableFile_ReturnsFalse()
     {
+        // Skip if running as root (permissions don't work)
+        if (posix_getuid() === 0) {
+            $this->markTestSkipped('Cannot test file permissions when running as root');
+        }
+
         // Arrange
         $testData = ['key' => 'value'];
         file_put_contents($this->testFile, '{}');
@@ -299,21 +335,24 @@ class CommonTest extends TestCase
 
     // ========== Helper Function Tests ==========
 
-    public function testSuccessResponse_ReturnsCorrectFormat()
+    public function testJsonDecode_HandlesValidJson()
     {
-        // This test verifies the response format
-        // Note: We can't directly test as it uses http_response_code and exits
-        // In production, you'd refactor to return values instead of exiting
+        // Test that json_decode works properly with UTF-8
+        $jsonString = '{"科目":"心理学","章节":"认知心理学"}';
+        $decoded = json_decode($jsonString, true);
 
-        $this->expectOutputRegex('/success/');
+        $this->assertIsArray($decoded);
+        $this->assertEquals('心理学', $decoded['科目']);
+        $this->assertEquals('认知心理学', $decoded['章节']);
+    }
 
-        // Mock environment
-        ob_start();
+    public function testJsonEncode_HandlesChineseCharacters()
+    {
+        // Test that json_encode works with JSON_UNESCAPED_UNICODE
+        $data = ['科目' => '心理学', '章节' => '认知心理学'];
+        $encoded = json_encode($data, JSON_UNESCAPED_UNICODE);
 
-        // We'll need to refactor common.php to make this testable
-        // For now, this is a placeholder
-        $this->assertTrue(true, 'Response formatting test placeholder');
-
-        ob_end_clean();
+        $this->assertStringContainsString('心理学', $encoded);
+        $this->assertStringNotContainsString('\\u', $encoded);
     }
 }
